@@ -1,8 +1,8 @@
 """added user model
 
-Revision ID: e33459d94822
+Revision ID: f3268b36b38f
 Revises:
-Create Date: 2024-09-23 12:42:27.814412
+Create Date: 2024-09-23 13:28:24.958226
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "e33459d94822"
+revision: str = "f3268b36b38f"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -30,7 +30,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_users_email"), "users", ["email"], unique=False)
+    op.create_index(op.f("ix_users_email"), "users", ["email"], unique=True)
 
 
 def downgrade() -> None:

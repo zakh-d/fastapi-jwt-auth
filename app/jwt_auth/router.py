@@ -28,6 +28,8 @@ class JWTAuthentication:
         self,
         jwt_secret: str,
         session_func: Callable[[], AsyncGenerator[AsyncSession, None]],
+        jwt_access_token_exp: int = 20,
+        jwt_refresh_token_exp: int = 24*60,
         login_url: str = "/login",
         register_url: str = "/register",
         me_url: str = "/me",
@@ -40,7 +42,7 @@ class JWTAuthentication:
         def get_auth_service(
             session: Annotated[AsyncSession, Depends(self._session_func)],
         ) -> AuthenticationService:
-            return AuthenticationService(session)
+            return AuthenticationService(session, jwt_secret, jwt_access_token_exp, jwt_refresh_token_exp)
 
         self._get_auth_service = get_auth_service
 
@@ -62,7 +64,9 @@ class JWTAuthentication:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Invalid credentials were provided",
                 )
-            return TokenPair(access_token="fake", refresh_token="fake")
+            access_token = auth_service.generate_access_token_for_user(user)
+            refresh_token = auth_service.generate_refresh_token_for_user(user)
+            return TokenPair(access_token=access_token, refresh_token=refresh_token)
 
         @self._router.post(register_url, status_code=status.HTTP_201_CREATED)
         async def register_user(

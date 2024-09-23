@@ -17,4 +17,8 @@ class Settings(BaseSettings):
             f':{self.POSTGRES_PORT}/{self.POSTGRES_DB}'
         )
 
+    JWT_SECRET: str
+    JWT_ACCESS_TOKEN_EXP_MINUTES: int = 20
+    JWT_REFRESH_TOKEN_EXP_MINUTES: int = 24*60  # one day
+
 settings = Settings()
