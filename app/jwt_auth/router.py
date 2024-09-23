@@ -5,7 +5,7 @@ from app.jwt_auth.auth_service import AuthenticationService
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .schemas import LoginIn, RefreshTokenIn, TokenPair
+from .schemas import LoginIn, RefreshTokenIn, TokenPair, UserCreationSchema, UserSchema
 
 
 class JWTAuthentication:
@@ -29,6 +29,7 @@ class JWTAuthentication:
         jwt_secret: str,
         session_func: Callable[[], AsyncGenerator[AsyncSession, None]],
         login_url: str = "/login",
+        register_url: str = "/register",
         me_url: str = "/me",
         refresh_token_url: str = "/refresh",
     ):
@@ -43,10 +44,10 @@ class JWTAuthentication:
 
         self._get_auth_service = get_auth_service
 
-        self._create_routes(login_url, me_url, refresh_token_url)
+        self._create_routes(login_url, register_url, me_url, refresh_token_url)
 
     def _create_routes(
-        self, login_url: str, me_url: str, refresh_token_url: str
+        self, login_url: str, register_url: str, me_url: str, refresh_token_url: str
     ) -> None:
         @self._router.post(login_url)
         async def login_user(
@@ -62,6 +63,23 @@ class JWTAuthentication:
                     detail="Invalid credentials were provided",
                 )
             return TokenPair(access_token="fake", refresh_token="fake")
+
+        @self._router.post(register_url, status_code=status.HTTP_201_CREATED)
+        async def register_user(
+            registration_data: UserCreationSchema,
+            auth_service: Annotated[
+                AuthenticationService, Depends(self._get_auth_service)
+            ],
+        ) -> UserSchema:
+            user = await auth_service.register_user(
+                registration_data.email, registration_data.password
+            )
+            if user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={"conflict_field": "email"},
+                )
+            return user
 
         @self._router.get(me_url)
         async def get_info_about_current_user():

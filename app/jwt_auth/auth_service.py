@@ -1,4 +1,5 @@
 from typing import Union
+
 from passlib.hash import argon2
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,4 +24,13 @@ class AuthenticationService:
             return None
         if not self._argon2_hasher.verify(password, user.hashed_password):
             return None
+        return UserSchema.model_validate(user)
+
+    async def register_user(self, email: str, password: str) -> Union[UserSchema, None]:
+        hashed_password = self._argon2_hasher.hash(password)
+        user = await self._user_repo.create_user_and_commit(email, hashed_password)
+
+        if user is None:
+            return None
+
         return UserSchema.model_validate(user)
