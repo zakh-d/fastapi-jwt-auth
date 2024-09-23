@@ -1,9 +1,11 @@
 from collections.abc import AsyncGenerator, Callable
+from typing import Annotated
 
-from fastapi import APIRouter
+from app.jwt_auth.auth_service import AuthenticationService
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .schemas import RefreshTokenIn, TokenPair
+from .schemas import LoginIn, RefreshTokenIn, TokenPair
 
 
 class JWTAuthentication:
@@ -32,14 +34,33 @@ class JWTAuthentication:
     ):
         self._router = APIRouter()
         self._secret = jwt_secret
+        self._session_func = session_func
+
+        def get_auth_service(
+            session: Annotated[AsyncSession, Depends(self._session_func)],
+        ) -> AuthenticationService:
+            return AuthenticationService(session)
+
+        self._get_auth_service = get_auth_service
+
         self._create_routes(login_url, me_url, refresh_token_url)
-        self._session = session_func
 
     def _create_routes(
         self, login_url: str, me_url: str, refresh_token_url: str
     ) -> None:
         @self._router.post(login_url)
-        async def login_user() -> TokenPair:
+        async def login_user(
+            login_data: LoginIn,
+            auth_service: Annotated[
+                AuthenticationService, Depends(self._get_auth_service)
+            ],
+        ) -> TokenPair:
+            user = await auth_service.login_user(login_data.email, login_data.password)
+            if user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid credentials were provided",
+                )
             return TokenPair(access_token="fake", refresh_token="fake")
 
         @self._router.get(me_url)
