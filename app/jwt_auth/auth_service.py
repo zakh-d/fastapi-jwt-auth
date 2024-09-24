@@ -1,7 +1,9 @@
 import datetime
 from typing import Union
+from uuid import UUID
 
 import jwt
+from jwt.exceptions import InvalidTokenError
 from passlib.hash import argon2
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -68,3 +70,15 @@ class AuthenticationService:
             "type": "refresh",
         }
         return jwt.encode(payload, self._secret, algorithm="HS256")
+
+    async def get_user_from_token(self, token: str) -> Union[UserSchema, None]:
+        try:
+            payload = jwt.decode(token, self._secret, algorithms=['HS256'])
+            if 'type' not in payload or payload['type'] != 'access':
+                return None
+            user_id = payload.get('user_id')
+            user = await self._user_repo.get_user_by_id(UUID(user_id))
+            return UserSchema.model_validate(user)
+        except InvalidTokenError:
+            return None
+
