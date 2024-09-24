@@ -11,9 +11,11 @@ Technology stack:
 - Connect JWT authentication to your FastAPI app by including router
  ```python
     from fastapi import FastAPI
-    from .jwt_auth.router import JWTAuthentication
+    
+    from app.deps import get_db_session  # async generator that yields AsyncSession
+    from app.jwt_auth.router import JWTAuthentication
 
-    auth = JWTAuthentication(jwt_secret='your_secret_key')
+    auth = JWTAuthentication(jwt_secret='your_secret_key', session_func=get_db_session)
 
     app = FastAPI()
     app.include_router(auth.router, prefix='auth', tags=['auth'])
